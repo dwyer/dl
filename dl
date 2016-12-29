@@ -79,6 +79,11 @@ RENAMING_MASKS = {
     'hh': lambda _: NOW.strftime('%H'),
     'mm': lambda _: NOW.strftime('%M'),
 
+    'date': str(NOW.date()),
+    'time': str(NOW.time()),
+    'datetime': NOW,
+    'datetime_iso': NOW.isoformat(),
+
     'text': lambda _: 'click here to download',
     'num': mask_num,
 }
