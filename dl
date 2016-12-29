@@ -10,6 +10,7 @@ import contextlib
 import datetime
 import os
 import re
+import sys
 import urllib2
 import urlparse
 
@@ -143,34 +144,40 @@ def get_urls(url):
         yield urlparse.urljoin(url, rel_url)
 
 
-def dl(args):
-    renaming_func = maskfunc(args.renaming_mask)
-    file_filter_regex = re.compile(args.filter, re.IGNORECASE)
-    for abs_url in get_urls(args.url):
+def dl(url, filter=None, renaming_mask=None, save_dir=None, verbose=False,
+       dryrun=False):
+    filter = filter or DEFAULT_FILTER
+    renaming_mask = renaming_mask or DEFAULT_RENAMING_MASK
+    renaming_func = maskfunc(renaming_mask)
+    save_dir = save_dir or DEFAULT_SAVE_DIR
+    file_filter_regex = re.compile(filter, re.IGNORECASE)
+    for abs_url in get_urls(url):
         _, filename = os.path.split(urlparse.urlparse(abs_url).path)
         if file_filter_regex.search(filename) is None:
-            if args.verbose:
-                print('ignoring', abs_url)
+            if verbose:
+                print('ignoring', abs_url, file=sys.stderr)
             continue
         name = renaming_func(abs_url)
-        path = os.path.join(args.save_dir, name)
+        path = os.path.join(save_dir, name)
         if os.path.exists(path):
-            print('skipping', path)
-            continue
-        print('saving', abs_url, 'to', path)
-        if not args.dryrun:
-            download(abs_url, path)
+            print('skipping', abs_url, file=sys.stderr)
+        else:
+            print('saving', abs_url, file=sys.stderr)
+            if not dryrun:
+                download(abs_url, path)
+        print(path)
 
 
 def main():
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('url')
-    arg_parser.add_argument('--filter', default=DEFAULT_FILTER)
-    arg_parser.add_argument('--renaming_mask', default=DEFAULT_RENAMING_MASK)
-    arg_parser.add_argument('--save_dir', default=DEFAULT_SAVE_DIR)
+    arg_parser.add_argument('--filter', default=None)
+    arg_parser.add_argument('--renaming_mask', default=None)
+    arg_parser.add_argument('--save_dir', default=None)
     arg_parser.add_argument('--verbose', action='store_true')
     arg_parser.add_argument('--dryrun', action='store_true')
-    dl(arg_parser.parse_args())
+    args = vars(arg_parser.parse_args())
+    dl(**args)
 
 
 if __name__ == '__main__':
