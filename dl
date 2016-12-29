@@ -135,11 +135,9 @@ def get_urls(url):
     with urlopen(url) as response:
         content = response.read()
     soup = BeautifulSoup(content, HTML_PARSER)
-    urls = []
     for link in soup.find_all('a'):
         rel_url = link['href']
-        urls.append(urlparse.urljoin(url, rel_url))
-    return urls
+        yield urlparse.urljoin(url, rel_url)
 
 
 def dl(args):
