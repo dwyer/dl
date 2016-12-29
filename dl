@@ -136,7 +136,10 @@ def get_urls(url):
         content = response.read()
     soup = BeautifulSoup(content, HTML_PARSER)
     for link in soup.find_all('a'):
-        rel_url = link['href']
+        try:
+            rel_url = link['href']
+        except KeyError:
+            continue
         yield urlparse.urljoin(url, rel_url)
 
 
