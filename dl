@@ -154,18 +154,29 @@ def get_urls(url):
 
 
 def dl(url, filter=None, renaming_mask=None, save_dir=None, verbose=False,
-       dryrun=False):
+       dryrun=False, depth=0, ignore=None):
+    if ignore is None:
+        ignore = set()
     filter = filter or DEFAULT_FILTER
     renaming_mask = renaming_mask or DEFAULT_RENAMING_MASK
     renaming_func = maskfunc(renaming_mask)
     save_dir = save_dir or DEFAULT_SAVE_DIR
     file_filter_regex = re.compile(filter, re.IGNORECASE)
     for abs_url in get_urls(url):
+        if abs_url in ignore:
+            continue
         _, filename = os.path.split(urlparse.urlparse(abs_url).path)
         if file_filter_regex.search(filename) is None:
-            if verbose:
+            if depth > 0:
+                ignore.add(abs_url)
+                print('following', abs_url, file=sys.stderr)
+                dl(abs_url, filter=filter, renaming_mask=renaming_mask,
+                   save_dir=save_dir, verbose=verbose, dryrun=dryrun,
+                   depth=depth-1, ignore=ignore)
+            elif verbose:
                 print('ignoring', abs_url, file=sys.stderr)
             continue
+        ignore.add(abs_url)
         name = renaming_func(abs_url)
         path = os.path.join(save_dir, name)
         if os.path.exists(path):
@@ -180,6 +191,7 @@ def dl(url, filter=None, renaming_mask=None, save_dir=None, verbose=False,
 def main():
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('url')
+    arg_parser.add_argument('--depth', type=int, default=0)
     arg_parser.add_argument('--filter', default=None)
     arg_parser.add_argument('--renaming_mask', default=None)
     arg_parser.add_argument('--save_dir', default=None)
