@@ -29,6 +29,7 @@ except ImportError:
 
 # RENAMING MASK #
 
+RENAMING_MASK_DELIM = '*'
 NOW = datetime.datetime.now()
 
 
@@ -90,10 +91,10 @@ RENAMING_MASKS = {
 def maskparse(mask):
     if not mask:
         return []
-    if '*' not in mask:
+    if RENAMING_MASK_DELIM not in mask:
         return [mask]
-    if mask.startswith('*'):
-        i = mask[1:].find('*')
+    if mask.startswith(RENAMING_MASK_DELIM):
+        i = mask[1:].find(RENAMING_MASK_DELIM)
         if i < 0:
             raise Exception('invalid mask: %r' % mask)
         i += 1
@@ -102,7 +103,7 @@ def maskparse(mask):
         res = [sub]
         res.extend(maskparse(mask[i + 1:]))
         return res
-    i = mask.find('*')
+    i = mask.find(RENAMING_MASK_DELIM)
     res = [mask[:i]]
     res.extend(maskparse(mask[i:]))
     return res
