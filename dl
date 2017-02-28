@@ -29,14 +29,15 @@ except ImportError:
     import urllib.request as urllib_request
 
 # CONFIG
+
 DEFAULT_SAVE_DIR = os.path.join(os.environ['HOME'], 'dlpy')
 DEFAULT_FILTER = r'\.(gif|jpe?g|png|webm)$'
 DEFAULT_RENAMING_MASK = '*flatcurl*/*name*.*ext*'
 MAX_WORKERS = multiprocessing.cpu_count() * 2 + 1
 
 try:
-    import html5lib  # noqa: F401
-    HTML_PARSER = 'html5lib'
+    import lxml  # noqa: F401
+    HTML_PARSER = 'lxml'
 except ImportError:
     HTML_PARSER = 'html.parser'
 
@@ -242,6 +243,7 @@ def dl(url,
 
 
 def main():
+    global HTML_PARSER
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('url')
     arg_parser.add_argument('--depth', type=int, default=0)
@@ -249,9 +251,11 @@ def main():
     arg_parser.add_argument('--prefix', default=None)
     arg_parser.add_argument('--renaming_mask', default=None)
     arg_parser.add_argument('--save_dir', default=None)
+    arg_parser.add_argument('--parser', default=None)
     arg_parser.add_argument('--verbose', action='store_true')
     arg_parser.add_argument('--dryrun', action='store_true')
     args = vars(arg_parser.parse_args())
+    HTML_PARSER = args.pop('parser') or HTML_PARSER
     dl(**args)
 
 
