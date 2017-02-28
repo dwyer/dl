@@ -12,6 +12,7 @@ import multiprocessing
 import os
 import re
 import sys
+import threading
 import urllib2
 import urlparse
 
@@ -29,6 +30,17 @@ try:
     HTML_PARSER = 'html5lib'
 except ImportError:
     HTML_PARSER = 'html.parser'
+
+# PRINT FUNC
+
+_print = print
+print_lock = threading.Lock()
+
+
+def print(*args, **kwargs):
+    with print_lock:
+        _print(*args, **kwargs)
+
 
 # RENAMING MASK #
 
