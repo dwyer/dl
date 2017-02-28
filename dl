@@ -34,6 +34,7 @@ DEFAULT_SAVE_DIR = os.path.join(os.environ['HOME'], 'dlpy')
 DEFAULT_FILTER = r'\.(gif|jpe?g|png|webm)$'
 DEFAULT_RENAMING_MASK = '*flatcurl*/*name*.*ext*'
 MAX_WORKERS = multiprocessing.cpu_count() * 2 + 1
+BLOCK_SIZE = os.stat(DEFAULT_SAVE_DIR).st_blksize
 
 try:
     import lxml  # noqa: F401
@@ -156,17 +157,19 @@ def urlopen(url, user_agent=USER_AGENT):
 def download(url, path):
     try:
         with urlopen(url) as response:
-            content = response.read()
-    except urllib_error.HTTPError as e:
+            dirpath = os.path.dirname(path)
+            if not os.path.isdir(dirpath):
+                os.makedirs(dirpath)
+            with open(path, 'wb') as fp:
+                while True:
+                    block = response.read(BLOCK_SIZE)
+                    if not block:
+                        break
+                    fp.write(block)
+        return path
+    except (IOError, OSError, urllib_error.HTTPError) as e:
         print(e, file=sys.stderr)
         return None
-    try:
-        os.makedirs(os.path.dirname(path))
-    except OSError:
-        pass
-    with open(path, 'wb') as fp:
-        fp.write(content)
-    return path
 
 
 def get_urls(url):
