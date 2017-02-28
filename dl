@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 import argparse
 import contextlib
 import datetime
+import multiprocessing
 import os
 import re
 import sys
@@ -15,11 +16,13 @@ import urllib2
 import urlparse
 
 from bs4 import BeautifulSoup
+from concurrent import futures
 
 # CONFIG
 DEFAULT_SAVE_DIR = os.path.join(os.environ['HOME'], 'dlpy')
 DEFAULT_FILTER = r'\.(gif|jpe?g|png|webm)$'
 DEFAULT_RENAMING_MASK = '*flatcurl*/*name*.*ext*'
+MAX_WORKERS = multiprocessing.cpu_count() * 2 + 1
 
 try:
     import html5lib  # noqa: F401
@@ -134,13 +137,14 @@ def download(url, path):
             content = response.read()
     except urllib2.HTTPError as e:
         print(e, file=sys.stderr)
-        return
+        return None
     try:
         os.makedirs(os.path.dirname(path))
     except OSError:
         pass
     with open(path, 'wb') as fp:
         fp.write(content)
+    return path
 
 
 def get_urls(url):
@@ -174,35 +178,42 @@ def dl(url,
     renaming_func = maskfunc(renaming_mask)
     save_dir = save_dir or DEFAULT_SAVE_DIR
     file_filter_regex = re.compile(filter, re.IGNORECASE)
-    for abs_url in get_urls(url):
-        if abs_url in ignore:
-            continue
-        _, filename = os.path.split(urlparse.urlparse(abs_url).path)
-        if file_filter_regex.search(filename) is None:
-            if depth > 0:
-                ignore.add(abs_url)
-                print('following', abs_url, file=sys.stderr)
-                dl(abs_url,
-                   filter=filter,
-                   renaming_mask=renaming_mask,
-                   save_dir=save_dir,
-                   verbose=verbose,
-                   dryrun=dryrun,
-                   depth=depth - 1,
-                   ignore=ignore)
-            elif verbose:
-                print('ignoring', abs_url, file=sys.stderr)
-            continue
-        ignore.add(abs_url)
-        name = renaming_func(abs_url)
-        path = os.path.join(save_dir, name)
-        if os.path.exists(path):
-            print('skipping', abs_url, file=sys.stderr)
-        else:
-            print('saving', abs_url, file=sys.stderr)
-            if not dryrun:
-                download(abs_url, path)
-        print(path)
+    with futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        for abs_url in get_urls(url):
+            if abs_url in ignore:
+                continue
+            _, filename = os.path.split(urlparse.urlparse(abs_url).path)
+            if file_filter_regex.search(filename) is None:
+                if depth > 0:
+                    ignore.add(abs_url)
+                    print('following', abs_url, file=sys.stderr)
+                    executor.submit(
+                        dl,
+                        abs_url,
+                        filter=filter,
+                        renaming_mask=renaming_mask,
+                        save_dir=save_dir,
+                        verbose=verbose,
+                        dryrun=dryrun,
+                        depth=depth - 1,
+                        ignore=ignore)
+                elif verbose:
+                    print('ignoring', abs_url, file=sys.stderr)
+                continue
+            ignore.add(abs_url)
+            name = renaming_func(abs_url)
+            path = os.path.join(save_dir, name)
+            if os.path.exists(path):
+                print('skipping', abs_url, file=sys.stderr)
+                print(path)
+            else:
+                print('saving', abs_url, file=sys.stderr)
+                if dryrun:
+                    print(path)
+                else:
+                    future = executor.submit(download, abs_url, path)
+                    future.add_done_callback(
+                        lambda future: print(future.result()))
 
 
 def main():
