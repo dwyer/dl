@@ -27,6 +27,7 @@ except ImportError:
     import urllib.error as urllib_error
     import urllib.parse as urllib_parse
     import urllib.request as urllib_request
+    basestring = str
 
 # CONFIG
 
@@ -200,16 +201,17 @@ def dl(url,
     if ignore is None:
         ignore = set()
     filter = filter or DEFAULT_FILTER
+    if isinstance(filter, basestring):
+        filter = re.compile(filter, re.IGNORECASE)
     renaming_mask = renaming_mask or DEFAULT_RENAMING_MASK
     renaming_func = maskfunc(renaming_mask)
     save_dir = save_dir or DEFAULT_SAVE_DIR
-    file_filter_regex = re.compile(filter, re.IGNORECASE)
     with futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         for abs_url in get_urls(url):
             if abs_url in ignore:
                 continue
             _, filename = os.path.split(urllib_parse.urlparse(abs_url).path)
-            if file_filter_regex.search(filename) is None:
+            if filter.search(filename) is None:
                 if depth > 0:
                     ignore.add(abs_url)
                     print('following', abs_url, file=sys.stderr)
