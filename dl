@@ -13,11 +13,20 @@ import os
 import re
 import sys
 import threading
-import urllib2
-import urlparse
 
 from bs4 import BeautifulSoup
 from concurrent import futures
+
+try:
+    # python 2
+    import urllib2 as urllib_error
+    import urllib2 as urllib_request
+    import urlparse as urllib_parse
+except ImportError:
+    # python 3
+    import urllib.error as urllib_error
+    import urllib.parse as urllib_parse
+    import urllib.request as urllib_request
 
 # CONFIG
 DEFAULT_SAVE_DIR = os.path.join(os.environ['HOME'], 'dlpy')
@@ -49,7 +58,7 @@ NOW = datetime.datetime.now()
 
 
 def mask_curl(url):
-    url_parts = urlparse.urlparse(url)
+    url_parts = urllib_parse.urlparse(url)
     dirname, _ = os.path.split(url_parts.path)
     return url_parts.netloc + dirname
 
@@ -59,14 +68,14 @@ def mask_flatcurl(url):
 
 
 def mask_name(url):
-    url_parts = urlparse.urlparse(url)
+    url_parts = urllib_parse.urlparse(url)
     _, name = os.path.split(url_parts.path)
     name, _ = os.path.splitext(name)
     return name
 
 
 def mask_ext(url):
-    url_parts = urlparse.urlparse(url)
+    url_parts = urllib_parse.urlparse(url)
     _, ext = os.path.splitext(url_parts.path)
     if ext.startswith('.'):
         ext = ext[1:]
@@ -87,8 +96,8 @@ RENAMING_MASKS = {
     'ext': mask_ext,
     'flatcurl': mask_flatcurl,
     'name': mask_name,
-    'url': lambda url: urlparse.urlparse(url).netloc,
-    'subdirs': lambda url: os.path.dirname(urlparse.urlparse(url).path),
+    'url': lambda url: urllib_parse.urlparse(url).netloc,
+    'subdirs': lambda url: os.path.dirname(urllib_parse.urlparse(url).path),
     'y': lambda _: NOW.strftime('%y'),
     'm': lambda _: NOW.strftime('%m'),
     'd': lambda _: NOW.strftime('%d'),
@@ -138,16 +147,16 @@ USER_AGENT = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) '
 
 def urlopen(url, user_agent=USER_AGENT):
     """Opens URL with spoofed user-agent"""
-    request = urllib2.Request(url)
+    request = urllib_request.Request(url)
     request.add_header('User-Agent', user_agent)
-    return contextlib.closing(urllib2.urlopen(request))
+    return contextlib.closing(urllib_request.urlopen(request))
 
 
 def download(url, path):
     try:
         with urlopen(url) as response:
             content = response.read()
-    except urllib2.HTTPError as e:
+    except urllib_error.HTTPError as e:
         print(e, file=sys.stderr)
         return None
     try:
@@ -163,7 +172,7 @@ def get_urls(url):
     try:
         with urlopen(url) as response:
             content = response.read()
-    except urllib2.URLError as e:
+    except urllib_error.URLError as e:
         print(e, file=sys.stderr)
         return
     soup = BeautifulSoup(content, HTML_PARSER)
@@ -172,7 +181,7 @@ def get_urls(url):
             rel_url = link['href']
         except KeyError:
             continue
-        yield urlparse.urljoin(url, rel_url)
+        yield urllib_parse.urljoin(url, rel_url)
 
 
 def dl(url,
@@ -195,7 +204,7 @@ def dl(url,
         for abs_url in get_urls(url):
             if abs_url in ignore:
                 continue
-            _, filename = os.path.split(urlparse.urlparse(abs_url).path)
+            _, filename = os.path.split(urllib_parse.urlparse(abs_url).path)
             if file_filter_regex.search(filename) is None:
                 if depth > 0:
                     ignore.add(abs_url)
