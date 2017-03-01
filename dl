@@ -210,6 +210,8 @@ def dl(url,
     with futures.ThreadPoolExecutor(MAX_WORKERS) as executor:
         for abs_url in get_urls(url):
             if abs_url in ignore or HTTP_REGEX.search(abs_url) is None:
+                if verbose:
+                    print('ignoring', abs_url)
                 continue
             _, filename = os.path.split(urllib_parse.urlparse(abs_url).path)
             if filter.search(filename) is None:
