@@ -36,6 +36,7 @@ DEFAULT_FILTER = r'\.(gif|jpe?g|png|webm)$'
 DEFAULT_RENAMING_MASK = '*flatcurl*/*name*.*ext*'
 MAX_WORKERS = multiprocessing.cpu_count() * 2 + 1
 BLOCK_SIZE = os.stat(DEFAULT_SAVE_DIR).st_blksize
+HTTP_REGEX = re.compile(r'^https?://', re.IGNORECASE)
 
 try:
     import lxml  # noqa: F401
@@ -208,7 +209,7 @@ def dl(url,
     save_dir = save_dir or DEFAULT_SAVE_DIR
     with futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         for abs_url in get_urls(url):
-            if abs_url in ignore:
+            if abs_url in ignore or HTTP_REGEX.search(abs_url) is None:
                 continue
             _, filename = os.path.split(urllib_parse.urlparse(abs_url).path)
             if filter.search(filename) is None:
