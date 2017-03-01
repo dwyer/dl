@@ -207,7 +207,7 @@ def dl(url,
     renaming_mask = renaming_mask or DEFAULT_RENAMING_MASK
     renaming_func = maskfunc(renaming_mask)
     save_dir = save_dir or DEFAULT_SAVE_DIR
-    with futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+    with futures.ThreadPoolExecutor(MAX_WORKERS) as executor:
         for abs_url in get_urls(url):
             if abs_url in ignore or HTTP_REGEX.search(abs_url) is None:
                 continue
@@ -249,7 +249,7 @@ def dl(url,
 
 
 def main():
-    global HTML_PARSER
+    global HTML_PARSER, MAX_WORKERS
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('url')
     arg_parser.add_argument('--depth', type=int, default=0)
@@ -258,10 +258,12 @@ def main():
     arg_parser.add_argument('--renaming_mask', default=None)
     arg_parser.add_argument('--save_dir', default=None)
     arg_parser.add_argument('--parser', default=None)
+    arg_parser.add_argument('--workers', type=int, default=MAX_WORKERS)
     arg_parser.add_argument('--verbose', action='store_true')
     arg_parser.add_argument('--dryrun', action='store_true')
     args = vars(arg_parser.parse_args())
     HTML_PARSER = args.pop('parser') or HTML_PARSER
+    MAX_WORKERS = args.pop('workers')
     dl(**args)
 
 
