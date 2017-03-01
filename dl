@@ -257,12 +257,12 @@ def main():
     arg_parser.add_argument('--prefix', default=None)
     arg_parser.add_argument('--renaming_mask', default=None)
     arg_parser.add_argument('--save_dir', default=None)
-    arg_parser.add_argument('--parser', default=None)
+    arg_parser.add_argument('--parser', default=HTML_PARSER)
     arg_parser.add_argument('--workers', type=int, default=MAX_WORKERS)
     arg_parser.add_argument('--verbose', action='store_true')
     arg_parser.add_argument('--dryrun', action='store_true')
     args = vars(arg_parser.parse_args())
-    HTML_PARSER = args.pop('parser') or HTML_PARSER
+    HTML_PARSER = args.pop('parser')
     MAX_WORKERS = args.pop('workers')
     dl(**args)
 
