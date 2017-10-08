@@ -36,7 +36,7 @@ logging.basicConfig(loglevel=logging.INFO)
 
 DEFAULT_SAVE_DIR = os.path.join(os.environ['HOME'], 'dlpy')
 DEFAULT_FILTER = r'\.(gif|jpe?g|png|webm)$'
-DEFAULT_RENAMING_MASK = '*flatcurl*/*name*.*ext*'
+DEFAULT_RENAMING_MASK = '{flatcurl}/{name}.{ext}'
 MAX_WORKERS = multiprocessing.cpu_count() * 2 + 1
 BLOCK_SIZE = os.stat(DEFAULT_SAVE_DIR).st_blksize
 HTTP_REGEX = re.compile(r'^https?://', re.IGNORECASE)
@@ -60,7 +60,8 @@ def print(*args, **kwargs):
 
 # RENAMING MASK #
 
-RENAMING_MASK_DELIM = '*'
+RENAMING_MASK_START = '{'
+RENAMING_MASK_END = '}'
 NOW = datetime.datetime.now()
 
 
@@ -122,10 +123,10 @@ RENAMING_MASKS = {
 def maskparse(mask):
     if not mask:
         return []
-    if RENAMING_MASK_DELIM not in mask:
+    if RENAMING_MASK_START not in mask:
         return [mask]
-    if mask.startswith(RENAMING_MASK_DELIM):
-        i = mask[1:].find(RENAMING_MASK_DELIM)
+    if mask.startswith(RENAMING_MASK_START):
+        i = mask[1:].find(RENAMING_MASK_END)
         if i < 0:
             raise Exception('invalid mask: %r' % mask)
         i += 1
@@ -134,7 +135,7 @@ def maskparse(mask):
         res = [sub]
         res.extend(maskparse(mask[i + 1:]))
         return res
-    i = mask.find(RENAMING_MASK_DELIM)
+    i = mask.find(RENAMING_MASK_START)
     res = [mask[:i]]
     res.extend(maskparse(mask[i:]))
     return res
