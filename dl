@@ -106,7 +106,7 @@ RENAMING_MASKS = {
     'name': mask_name,
     'url': lambda url: urllib_parse.urlparse(url).netloc,
     'subdirs': lambda url: os.path.dirname(urllib_parse.urlparse(url).path),
-    'y': lambda _: NOW.strftime('%y'),
+    'y': lambda _: NOW.strftime('%Y'),
     'm': lambda _: NOW.strftime('%m'),
     'd': lambda _: NOW.strftime('%d'),
     'hh': lambda _: NOW.strftime('%H'),
