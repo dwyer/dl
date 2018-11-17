@@ -151,16 +151,18 @@ def maskfunc(mask):
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'
 
 
-def urlopen(url, user_agent=USER_AGENT):
+def urlopen(url, referer=None, user_agent=USER_AGENT):
     """Opens URL with spoofed user-agent"""
     request = urllib_request.Request(url)
     request.add_header('User-Agent', user_agent)
+    if referer:
+        request.add_header('Referer', referer)
     return contextlib.closing(urllib_request.urlopen(request))
 
 
-def download(url, path):
+def download(url, path, referer=None):
     try:
-        with urlopen(url) as response:
+        with urlopen(url, referer) as response:
             dirpath = os.path.dirname(path)
             if not os.path.isdir(dirpath):
                 os.makedirs(dirpath)
@@ -253,7 +255,7 @@ def dl(url,
                 if dryrun:
                     print(path)
                 else:
-                    future = executor.submit(download, abs_url, path)
+                    future = executor.submit(download, abs_url, path, url)
                     future.add_done_callback(
                         lambda future: print(future.result()))
 
