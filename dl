@@ -148,9 +148,7 @@ def maskfunc(mask):
 
 # END RENAMING MASK
 
-USER_AGENT = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) '
-              'AppleWebKit/537.36 (KHTML, like Gecko) '
-              'Chrome/52.0.2743.116 Safari/537.36')
+USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'
 
 
 def urlopen(url, user_agent=USER_AGENT):
