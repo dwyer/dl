@@ -10,7 +10,6 @@ setup(
     license='BSD',
     scripts=['dl'],
     install_requires=[
-        'beautifulsoup4',
         'futures',
     ],
 )

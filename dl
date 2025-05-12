@@ -3,6 +3,7 @@
 import argparse
 import contextlib
 import datetime
+import html.parser
 import logging
 import multiprocessing
 import os
@@ -13,8 +14,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from bs4 import BeautifulSoup
 from concurrent import futures
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -25,12 +26,6 @@ DEFAULT_FILTER = r'\.(gif|jpe?g|png|webm)$'
 DEFAULT_RENAMING_MASK = '{flatcurl}/{name}.{ext}'
 MAX_WORKERS = multiprocessing.cpu_count() * 2 + 1
 HTTP_REGEX = re.compile(r'^https?://', re.IGNORECASE)
-
-try:
-    import lxml  # noqa: F401
-    HTML_PARSER = 'lxml'
-except ImportError:
-    HTML_PARSER = 'html.parser'
 
 # PRINT FUNC
 
@@ -133,7 +128,7 @@ def maskfunc(mask):
 
 # END RENAMING MASK
 
-USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.102 Safari/537.36'
+USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
 
 
 def urlopen(url, referer=None, user_agent=USER_AGENT):
@@ -164,26 +159,37 @@ def download(url, path, referer=None):
         return None
 
 
+class MyHTMLParser(html.parser.HTMLParser):
+
+    def __init__(self, url):
+        super().__init__()
+        self.base_url = url
+        self.urls = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'base':
+            for key, value in attrs:
+                if key == 'href':
+                    self.base_url = value
+                    break
+        elif tag == 'a':
+            for key, value in attrs:
+                if key == 'href':
+                    url = urllib.parse.urljoin(self.base_url, value)
+                    self.urls.append(url)
+                    break
+
+
 def get_urls(url):
     try:
         with urlopen(url) as response:
-            content = response.read()
+            content = response.read().decode()
     except urllib.error.URLError as e:
         print('error: %s: %s' % (e, url), file=sys.stderr)
         return
-    soup = BeautifulSoup(content, HTML_PARSER)
-    for base in soup.find_all('base'):
-        try:
-            url = base['href']
-        except KeyError:
-            continue
-        break
-    for link in soup.find_all('a'):
-        try:
-            rel_url = link['href']
-        except KeyError:
-            continue
-        yield urllib.parse.urljoin(url, rel_url)
+    parser = MyHTMLParser(url)
+    parser.feed(content)
+    return parser.urls
 
 
 def dl(url,
@@ -247,7 +253,7 @@ def dl(url,
 
 
 def main():
-    global HTML_PARSER, MAX_WORKERS
+    global MAX_WORKERS
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('url')
     arg_parser.add_argument('--depth', type=int, default=0)
@@ -255,12 +261,10 @@ def main():
     arg_parser.add_argument('--prefix', default=None)
     arg_parser.add_argument('--renaming_mask', default=None)
     arg_parser.add_argument('--save_dir', default=None)
-    arg_parser.add_argument('--parser', default=HTML_PARSER)
     arg_parser.add_argument('--workers', type=int, default=MAX_WORKERS)
     arg_parser.add_argument('--verbose', action='store_true')
     arg_parser.add_argument('--dryrun', action='store_true')
     args = vars(arg_parser.parse_args())
-    HTML_PARSER = args.pop('parser')
     MAX_WORKERS = args.pop('workers')
     dl(**args)
 
