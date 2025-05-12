@@ -1,9 +1,4 @@
-#!/usr/bin/env python
-# -*-coding:utf-8-*-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+#!/usr/bin/env python3
 
 import argparse
 import contextlib
@@ -14,23 +9,14 @@ import os
 import re
 import sys
 import threading
+import urllib.error
+import urllib.parse
+import urllib.request
 
 from bs4 import BeautifulSoup
 from concurrent import futures
 
-try:
-    # python 2
-    import urllib2 as urllib_error
-    import urllib2 as urllib_request
-    import urlparse as urllib_parse
-except ImportError:
-    # python 3
-    import urllib.error as urllib_error
-    import urllib.parse as urllib_parse
-    import urllib.request as urllib_request
-    basestring = str
-
-logging.basicConfig(loglevel=logging.INFO)
+logging.basicConfig(level=logging.INFO)
 
 # CONFIG
 
@@ -38,7 +24,6 @@ DEFAULT_SAVE_DIR = os.path.join(os.environ['HOME'], 'dlpy')
 DEFAULT_FILTER = r'\.(gif|jpe?g|png|webm)$'
 DEFAULT_RENAMING_MASK = '{flatcurl}/{name}.{ext}'
 MAX_WORKERS = multiprocessing.cpu_count() * 2 + 1
-BLOCK_SIZE = os.stat(DEFAULT_SAVE_DIR).st_blksize
 HTTP_REGEX = re.compile(r'^https?://', re.IGNORECASE)
 
 try:
@@ -66,7 +51,7 @@ NOW = datetime.datetime.now()
 
 
 def mask_curl(url):
-    url_parts = urllib_parse.urlparse(url)
+    url_parts = urllib.parse.urlparse(url)
     dirname, _ = os.path.split(url_parts.path)
     return url_parts.netloc + dirname
 
@@ -76,14 +61,14 @@ def mask_flatcurl(url):
 
 
 def mask_name(url):
-    url_parts = urllib_parse.urlparse(url)
+    url_parts = urllib.parse.urlparse(url)
     _, name = os.path.split(url_parts.path)
     name, _ = os.path.splitext(name)
     return name
 
 
 def mask_ext(url):
-    url_parts = urllib_parse.urlparse(url)
+    url_parts = urllib.parse.urlparse(url)
     _, ext = os.path.splitext(url_parts.path)
     if ext.startswith('.'):
         ext = ext[1:]
@@ -104,8 +89,8 @@ RENAMING_MASKS = {
     'ext': mask_ext,
     'flatcurl': mask_flatcurl,
     'name': mask_name,
-    'url': lambda url: urllib_parse.urlparse(url).netloc,
-    'subdirs': lambda url: os.path.dirname(urllib_parse.urlparse(url).path),
+    'url': lambda url: urllib.parse.urlparse(url).netloc,
+    'subdirs': lambda url: os.path.dirname(urllib.parse.urlparse(url).path),
     'y': lambda _: NOW.strftime('%Y'),
     'm': lambda _: NOW.strftime('%m'),
     'd': lambda _: NOW.strftime('%d'),
@@ -153,11 +138,11 @@ USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_1) AppleWebKit/537.36
 
 def urlopen(url, referer=None, user_agent=USER_AGENT):
     """Opens URL with spoofed user-agent"""
-    request = urllib_request.Request(url)
+    request = urllib.request.Request(url)
     request.add_header('User-Agent', user_agent)
     if referer:
         request.add_header('Referer', referer)
-    return contextlib.closing(urllib_request.urlopen(request))
+    return contextlib.closing(urllib.request.urlopen(request))
 
 
 def download(url, path, referer=None):
@@ -166,14 +151,15 @@ def download(url, path, referer=None):
             dirpath = os.path.dirname(path)
             if not os.path.isdir(dirpath):
                 os.makedirs(dirpath)
+            block_size = os.stat(dirpath).st_blksize
             with open(path, 'wb') as fp:
                 while True:
-                    block = response.read(BLOCK_SIZE)
+                    block = response.read(block_size)
                     if not block:
                         break
                     fp.write(block)
         return path
-    except (IOError, OSError, urllib_error.HTTPError) as e:
+    except (IOError, OSError, urllib.error.HTTPError) as e:
         print('error: %s: %s' % (e, url), file=sys.stderr)
         return None
 
@@ -182,7 +168,7 @@ def get_urls(url):
     try:
         with urlopen(url) as response:
             content = response.read()
-    except urllib_error.URLError as e:
+    except urllib.error.URLError as e:
         print('error: %s: %s' % (e, url), file=sys.stderr)
         return
     soup = BeautifulSoup(content, HTML_PARSER)
@@ -197,7 +183,7 @@ def get_urls(url):
             rel_url = link['href']
         except KeyError:
             continue
-        yield urllib_parse.urljoin(url, rel_url)
+        yield urllib.parse.urljoin(url, rel_url)
 
 
 def dl(url,
@@ -212,7 +198,7 @@ def dl(url,
     if ignore is None:
         ignore = set()
     filter = filter or DEFAULT_FILTER
-    if isinstance(filter, basestring):
+    if isinstance(filter, str):
         filter = re.compile(filter, re.IGNORECASE)
     renaming_mask = renaming_mask or DEFAULT_RENAMING_MASK
     renaming_func = maskfunc(renaming_mask)
@@ -223,7 +209,7 @@ def dl(url,
                 if verbose:
                     print('ignoring', abs_url)
                 continue
-            _, filename = os.path.split(urllib_parse.urlparse(abs_url).path)
+            _, filename = os.path.split(urllib.parse.urlparse(abs_url).path)
             if filter.search(filename) is None:
                 if depth > 0:
                     ignore.add(abs_url)
