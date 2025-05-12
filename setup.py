@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='dl',
-    version='0.2-dev',
+    version='0.2',
     description='A command-line downloader.',
     author='Casey Dwyer',
     author_email='caseydwyer@gmail.com',
